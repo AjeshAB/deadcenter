@@ -1,0 +1,23 @@
+{
+  "id": "builtin/head-level-track",
+  "name": "Head-level Track",
+  "category": "tracking",
+  "description": "Hold left click and follow the target. Only head contact counts.",
+  "weapon": {
+    "mode": "hold",
+    "dps": 100
+  },
+  "targets": {
+    "type": "humanoid",
+    "hp": 400,
+    "size": 0.4,
+    "movement": {
+      "type": "strafe",
+      "speed": 4.5
+    }
+  },
+  "scoring": {
+    "metric": "onTargetPercent",
+    "headOnly": true
+  }
+}

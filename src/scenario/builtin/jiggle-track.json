@@ -1,0 +1,28 @@
+{
+  "id": "builtin/jiggle-track",
+  "name": "Jiggle Track",
+  "category": "tracking",
+  "description": "Hold left click and follow the target. Keep contact through every direction change.",
+  "weapon": {
+    "mode": "hold",
+    "dps": 100
+  },
+  "targets": {
+    "type": "sphere",
+    "hp": 400,
+    "size": 0.4,
+    "movement": {
+      "type": "jiggle",
+      "speed": 6,
+      "changeEvery": [
+        0.15,
+        0.35
+      ],
+      "width": 0.8
+    }
+  },
+  "scoring": {
+    "metric": "onTargetPercent",
+    "headOnly": false
+  }
+}

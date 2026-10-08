@@ -1,0 +1,43 @@
+{
+  "id": "builtin/flick-track",
+  "name": "Flick \u2192 Track",
+  "category": "combo",
+  "description": "Acquire the off-angle target, then hold contact to finish.",
+  "stages": [
+    {
+      "type": "flick",
+      "spawn": {
+        "angleFromCrosshair": [
+          25,
+          60
+        ]
+      },
+      "timeLimit": 0.8
+    },
+    {
+      "type": "track",
+      "hp": 150,
+      "movement": {
+        "type": "strafe",
+        "speed": 5.4
+      }
+    }
+  ],
+  "movement": "locked",
+  "repeat": 10,
+  "targets": {
+    "type": "humanoid",
+    "hp": 150
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "perStage": true,
+    "headOnly": false,
+    "onlyAccurateShots": false
+  },
+  "hud": {
+    "speedBar": false
+  }
+}

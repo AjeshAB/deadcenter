@@ -1,0 +1,30 @@
+{
+  "id": "builtin/strafe-track",
+  "name": "Strafe Track",
+  "category": "tracking",
+  "description": "Hold left click and follow the target. Keep contact through every direction change.",
+  "weapon": {
+    "mode": "hold",
+    "dps": 100
+  },
+  "targets": {
+    "type": "sphere",
+    "hp": 400,
+    "size": 0.4,
+    "movement": {
+      "type": "strafe",
+      "speed": [
+        4.5,
+        6.75
+      ],
+      "changeEvery": [
+        0.3,
+        1.1
+      ]
+    }
+  },
+  "scoring": {
+    "metric": "onTargetPercent",
+    "headOnly": false
+  }
+}

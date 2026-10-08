@@ -1,0 +1,67 @@
+{
+  "id": "builtin/jiggle-swing",
+  "name": "Jiggle \u2192 Swing",
+  "category": "combo",
+  "description": "Spot the bot, tuck back into cover, then swing for the kill.",
+  "stages": [
+    {
+      "type": "spot"
+    },
+    {
+      "type": "return"
+    },
+    {
+      "type": "move"
+    },
+    {
+      "type": "tap"
+    }
+  ],
+  "movement": "free",
+  "repeat": 10,
+  "targets": {
+    "type": "humanoid",
+    "hp": 150
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "perStage": true,
+    "headOnly": false,
+    "onlyAccurateShots": true
+  },
+  "hud": {
+    "speedBar": true
+  },
+  "map": {
+    "boxes": [
+      {
+        "min": [
+          -5,
+          0,
+          -3
+        ],
+        "max": [
+          0.6,
+          3,
+          -2
+        ]
+      }
+    ]
+  },
+  "bots": [
+    {
+      "pos": [
+        1.4,
+        0,
+        -7
+      ],
+      "reaction": [
+        0.8,
+        1.1
+      ],
+      "shootsBack": true
+    }
+  ]
+}

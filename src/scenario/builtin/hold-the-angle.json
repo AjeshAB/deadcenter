@@ -1,0 +1,57 @@
+{
+  "id": "builtin/hold-the-angle",
+  "name": "Hold the Angle",
+  "category": "angle-slice",
+  "description": "Hold head height. Eliminate each swinging bot.",
+  "movement": "locked",
+  "map": {
+    "boxes": [
+      {
+        "min": [
+          -6,
+          0,
+          -8
+        ],
+        "max": [
+          -0.5,
+          3,
+          -7
+        ]
+      }
+    ]
+  },
+  "bots": [
+    {
+      "pos": [
+        1,
+        0,
+        -10
+      ],
+      "reaction": [
+        0.45,
+        0.65
+      ],
+      "shootsBack": true,
+      "peekType": "swing",
+      "delay": 1
+    }
+  ],
+  "weapon": {
+    "moveSpread": 2.5
+  },
+  "targets": {
+    "type": "humanoid"
+  },
+  "rounds": 10,
+  "drill": "standard",
+  "randomizeBots": {
+    "jitter": 0,
+    "dropChance": 0
+  },
+  "scoring": {
+    "metric": "placementError"
+  },
+  "hud": {
+    "speedBar": false
+  }
+}

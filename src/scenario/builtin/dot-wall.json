@@ -1,0 +1,9 @@
+{
+  "id": "builtin/dot-wall",
+  "name": "Dot Wall",
+  "category": "wall",
+  "description": "Static targets. Random spawns. Build a stronger first shot.",
+  "targets": {
+    "maxAlive": 6
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "id": "builtin/hold-flick-rehold",
+  "name": "Hold \u2192 Flick \u2192 Re-hold",
+  "category": "combo",
+  "description": "Hold the angle, eliminate the peeker, and reset your crosshair.",
+  "stages": [
+    {
+      "type": "hold"
+    },
+    {
+      "type": "tap"
+    },
+    {
+      "type": "hold"
+    }
+  ],
+  "movement": "locked",
+  "repeat": 10,
+  "targets": {
+    "type": "humanoid",
+    "hp": 150
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "perStage": true,
+    "headOnly": false,
+    "onlyAccurateShots": false
+  },
+  "hud": {
+    "speedBar": false
+  },
+  "bots": [
+    {
+      "pos": [
+        1,
+        0,
+        -10
+      ],
+      "reaction": [
+        0.45,
+        0.65
+      ],
+      "shootsBack": true,
+      "peekType": "swing",
+      "delay": 0.8
+    }
+  ],
+  "map": {
+    "boxes": [
+      {
+        "min": [
+          -6,
+          0,
+          -8
+        ],
+        "max": [
+          -0.5,
+          3,
+          -7
+        ]
+      }
+    ]
+  }
+}

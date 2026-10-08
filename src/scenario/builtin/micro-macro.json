@@ -1,0 +1,43 @@
+{
+  "id": "builtin/micro-macro",
+  "name": "Micro \u2192 Macro",
+  "category": "combo",
+  "description": "Alternate a small correction with a wide flick.",
+  "stages": [
+    {
+      "type": "micro",
+      "spawn": {
+        "angleFromCrosshair": [
+          2,
+          10
+        ]
+      }
+    },
+    {
+      "type": "macro",
+      "spawn": {
+        "angleFromCrosshair": [
+          25,
+          60
+        ]
+      }
+    }
+  ],
+  "movement": "locked",
+  "repeat": 10,
+  "targets": {
+    "type": "humanoid",
+    "hp": 150
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "perStage": true,
+    "headOnly": false,
+    "onlyAccurateShots": false
+  },
+  "hud": {
+    "speedBar": false
+  }
+}

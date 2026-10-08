@@ -1,0 +1,27 @@
+{
+  "id": "builtin/micro-correction",
+  "name": "Micro Correction",
+  "category": "error-fix",
+  "description": "Make small corrections. Target size adapts toward 75% accuracy.",
+  "drill": "micro",
+  "movement": "locked",
+  "targets": {
+    "type": "dot",
+    "distance": [
+      10,
+      16
+    ]
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "metric": "score",
+    "onlyAccurateShots": false
+  },
+  "hud": {
+    "speedBar": false,
+    "stopTiming": false,
+    "headLine": false
+  }
+}

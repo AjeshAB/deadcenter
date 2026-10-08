@@ -1,0 +1,30 @@
+{
+  "id": "builtin/reactive-track",
+  "name": "Reactive Track",
+  "category": "tracking",
+  "description": "Hold left click and follow the target. Keep contact through every direction change.",
+  "weapon": {
+    "mode": "hold",
+    "dps": 100
+  },
+  "targets": {
+    "type": "sphere",
+    "hp": 400,
+    "size": 0.4,
+    "movement": {
+      "type": "reactive",
+      "speed": [
+        4,
+        6.75
+      ],
+      "changeEvery": [
+        0.12,
+        0.5
+      ]
+    }
+  },
+  "scoring": {
+    "metric": "onTargetPercent",
+    "headOnly": false
+  }
+}

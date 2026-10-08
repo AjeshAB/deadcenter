@@ -1,0 +1,88 @@
+{
+  "id": "builtin/slice-multi",
+  "name": "Slice \u2192 Pre-aim \u2192 Multi-kill",
+  "category": "combo",
+  "description": "Clear all three angles in one push.",
+  "stages": [
+    {
+      "type": "slice"
+    }
+  ],
+  "movement": "free",
+  "repeat": 10,
+  "targets": {
+    "type": "humanoid",
+    "hp": 150
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "perStage": true,
+    "headOnly": false,
+    "onlyAccurateShots": true
+  },
+  "hud": {
+    "speedBar": true
+  },
+  "map": {
+    "boxes": [
+      {
+        "min": [
+          -5,
+          0,
+          -3
+        ],
+        "max": [
+          0.6,
+          3,
+          -2
+        ]
+      }
+    ]
+  },
+  "bots": [
+    {
+      "pos": [
+        1.4,
+        0,
+        -7
+      ],
+      "reaction": [
+        0.45,
+        0.65
+      ],
+      "shootsBack": true,
+      "peekType": "hold",
+      "delay": 0
+    },
+    {
+      "pos": [
+        -1,
+        0,
+        -12
+      ],
+      "reaction": [
+        0.45,
+        0.65
+      ],
+      "shootsBack": true,
+      "peekType": "hold",
+      "delay": 0
+    },
+    {
+      "pos": [
+        -4,
+        0,
+        -18
+      ],
+      "reaction": [
+        0.45,
+        0.65
+      ],
+      "shootsBack": true,
+      "peekType": "hold",
+      "delay": 0
+    }
+  ]
+}

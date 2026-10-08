@@ -1,0 +1,28 @@
+{
+  "id": "builtin/close-swirl",
+  "name": "Close Swirl",
+  "category": "tracking",
+  "description": "Hold left click and follow the target. Keep contact through every direction change.",
+  "weapon": {
+    "mode": "hold",
+    "dps": 100
+  },
+  "targets": {
+    "type": "sphere",
+    "hp": 400,
+    "size": 0.4,
+    "movement": {
+      "type": "circle",
+      "speed": 5,
+      "radius": 4
+    },
+    "distance": [
+      4,
+      4
+    ]
+  },
+  "scoring": {
+    "metric": "onTargetPercent",
+    "headOnly": false
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "builtin/head-height",
+  "name": "Head Height Line",
+  "category": "error-fix",
+  "description": "Keep your aim at head height. The guide fades after 20 seconds.",
+  "drill": "head-height",
+  "movement": "locked",
+  "targets": {
+    "type": "humanoid",
+    "distance": [
+      10,
+      16
+    ]
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "metric": "score",
+    "onlyAccurateShots": false
+  },
+  "hud": {
+    "speedBar": false,
+    "stopTiming": false,
+    "headLine": true
+  }
+}

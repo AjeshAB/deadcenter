@@ -1,0 +1,32 @@
+{
+  "id": "builtin/counter-strafe",
+  "name": "Counter-Strafe Trainer",
+  "category": "error-fix",
+  "description": "Strafe between the floor markers, then stop and tap when the target appears.",
+  "drill": "counter-strafe",
+  "movement": "strafe-only",
+  "targets": {
+    "type": "humanoid",
+    "distance": [
+      10,
+      16
+    ],
+    "spawnDelay": [
+      0.4,
+      1.4
+    ],
+    "lifetime": 1.2
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "metric": "score",
+    "onlyAccurateShots": true
+  },
+  "hud": {
+    "speedBar": true,
+    "stopTiming": true,
+    "headLine": false
+  }
+}

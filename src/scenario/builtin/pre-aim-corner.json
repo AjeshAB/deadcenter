@@ -1,0 +1,55 @@
+{
+  "id": "builtin/pre-aim-corner",
+  "name": "Pre-aim Corner",
+  "category": "angle-slice",
+  "description": "Keep the crosshair on the head before it appears. Aim for under 2\u00b0 at reveal.",
+  "movement": "free",
+  "map": {
+    "boxes": [
+      {
+        "min": [
+          -5,
+          0,
+          -3
+        ],
+        "max": [
+          0.6,
+          3,
+          -2
+        ]
+      }
+    ]
+  },
+  "bots": [
+    {
+      "pos": [
+        1.4,
+        0,
+        -7
+      ],
+      "reaction": [
+        0.45,
+        0.65
+      ],
+      "shootsBack": true
+    }
+  ],
+  "weapon": {
+    "moveSpread": 2.5
+  },
+  "targets": {
+    "type": "humanoid"
+  },
+  "rounds": 10,
+  "drill": "pre-aim",
+  "randomizeBots": {
+    "jitter": 0,
+    "dropChance": 0
+  },
+  "scoring": {
+    "metric": "placementError"
+  },
+  "hud": {
+    "speedBar": true
+  }
+}

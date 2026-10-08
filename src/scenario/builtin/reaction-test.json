@@ -1,0 +1,32 @@
+{
+  "id": "builtin/reaction-test",
+  "name": "Reaction Test",
+  "category": "error-fix",
+  "description": "Wait for the center target. Early clicks cost points.",
+  "drill": "reaction",
+  "movement": "locked",
+  "targets": {
+    "type": "sphere",
+    "distance": [
+      12,
+      12
+    ],
+    "size": 0.3,
+    "spawnDelay": [
+      1,
+      3
+    ]
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "metric": "reactionMs",
+    "onlyAccurateShots": false
+  },
+  "hud": {
+    "speedBar": false,
+    "stopTiming": false,
+    "headLine": false
+  }
+}

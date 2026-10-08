@@ -1,0 +1,28 @@
+{
+  "id": "builtin/click-timing",
+  "name": "Click Timing",
+  "category": "error-fix",
+  "description": "Finish your flick before clicking. Shots require a steady crosshair.",
+  "drill": "click-timing",
+  "movement": "locked",
+  "targets": {
+    "type": "humanoid",
+    "distance": [
+      10,
+      16
+    ]
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "metric": "score",
+    "onlyAccurateShots": false,
+    "maxMouseSpeed": 35
+  },
+  "hud": {
+    "speedBar": false,
+    "stopTiming": false,
+    "headLine": false
+  }
+}

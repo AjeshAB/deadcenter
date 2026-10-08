@@ -1,0 +1,30 @@
+{
+  "id": "builtin/tap-discipline",
+  "name": "Tap Discipline",
+  "category": "error-fix",
+  "description": "Tap in rhythm. Hits only count after bloom recovers.",
+  "drill": "tap-discipline",
+  "movement": "locked",
+  "targets": {
+    "type": "humanoid",
+    "distance": [
+      10,
+      16
+    ]
+  },
+  "weapon": {
+    "moveSpread": 4,
+    "bloomPerShot": 2,
+    "bloomRecovery": 4
+  },
+  "scoring": {
+    "metric": "score",
+    "onlyAccurateShots": false,
+    "maxSpread": 0.25
+  },
+  "hud": {
+    "speedBar": false,
+    "stopTiming": false,
+    "headLine": false
+  }
+}

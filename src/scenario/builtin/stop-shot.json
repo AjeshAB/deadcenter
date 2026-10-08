@@ -1,0 +1,32 @@
+{
+  "id": "builtin/stop-shot",
+  "name": "Stop-Shot Timing",
+  "category": "error-fix",
+  "description": "Move, stop, and shoot in the green speed zone.",
+  "drill": "stop-shot",
+  "movement": "strafe-only",
+  "targets": {
+    "type": "humanoid",
+    "distance": [
+      10,
+      16
+    ],
+    "spawnDelay": [
+      0.4,
+      1.4
+    ],
+    "lifetime": 1.2
+  },
+  "weapon": {
+    "moveSpread": 4
+  },
+  "scoring": {
+    "metric": "score",
+    "onlyAccurateShots": true
+  },
+  "hud": {
+    "speedBar": true,
+    "stopTiming": true,
+    "headLine": false
+  }
+}
