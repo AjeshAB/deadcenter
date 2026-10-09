@@ -16,6 +16,7 @@ export class Bot {
     this.reaction = between(rng, config.reaction);
   }
   update(dt: number, visible: (head: Vector3) => boolean) {
+    this.target.visibleNow = false;
     if (this.state === "dead") return false;
     this.age += dt;
     if (this.age < this.config.delay) {
@@ -38,7 +39,8 @@ export class Bot {
       this.target.group.position.y =
         this.target.anchor.y + Math.abs(Math.sin(t * 3)) * 1.5;
     if (this.config.strafe) this.target.update(dt);
-    if (visible(this.target.head)) {
+    this.target.visibleNow = visible(this.target.head);
+    if (this.target.visibleNow) {
       this.seenFor += dt;
       this.state = "visible";
       this.spotted = true;

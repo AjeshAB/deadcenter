@@ -1,3 +1,5 @@
+import { FrameDebug } from "./game/debug";
+import { drawFeedback } from "./game/feedback";
 import "./style.css";
 import {
   createIcons,
@@ -65,7 +67,7 @@ const range = (
 ) =>
   `<label class="range-label" for="${id}">${label}<span><output id="${id}-value">${value}${unit}</output></span></label><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${value}">`;
 $("#app").innerHTML = `
-<aside class="sidebar"><a class="brand" href="#" aria-label="Deadcenter home"><span class="brand-mark">${icon("crosshair")}</span><span>deadcenter<span class="brand-dot">.</span></span></a><div class="workspace-label">YOUR TRAINING SPACE</div><nav><button class="nav-item active" data-nav="range">${icon("crosshair")}Practice range<span class="nav-index">01</span></button><button class="nav-item" data-nav="crosshair">${icon("panel-top")}Crosshair lab${icon("arrow-up-right")}</button><button class="nav-item" data-nav="history">${icon("activity")}Session history</button></nav><div class="sidebar-tip"><span class="tiny-label">A LITTLE, EVERY DAY.</span><p>Good aim isn’t luck.<br>It’s a habit.</p><span class="tip-line"></span><small>Make your next shot count.</small></div><div class="sidebar-bottom"><span class="valorant-logo">V</span><div>Built for Valorant<small>Independent. Precision focused.</small></div><span class="version">v0.1</span></div></aside>
+<aside class="sidebar"><a class="brand" href="#" aria-label="Deadcenter home"><span class="brand-mark">${icon("crosshair")}</span><span>deadcenter<span class="brand-dot">.</span></span></a><div class="workspace-label">YOUR TRAINING SPACE</div><nav><button class="nav-item active" data-nav="range">${icon("crosshair")}Practice range<span class="nav-index">01</span></button><button class="nav-item" data-nav="crosshair">${icon("panel-top")}Crosshair lab${icon("arrow-up-right")}</button><button class="nav-item" data-nav="history">${icon("activity")}Session history</button></nav><div class="sidebar-tip"><span class="tiny-label">A LITTLE, EVERY DAY.</span><p>Good aim isn’t luck.<br>It’s a habit.</p><span class="tip-line"></span><small>Make your next shot count.</small></div><div class="sidebar-bottom"><span class="valorant-logo">V</span><div>Built for Valorant<small>Independent. Precision focused.</small></div><span class="version">v0.2</span></div></aside>
 <div class="main-shell"><header class="topbar"><span class="breadcrumb">Workspace <span>/</span> <strong>Practice range</strong></span><div class="topbar-right"><span class="local-status"><b></b> All settings saved locally</span><button class="icon-btn" id="help" aria-label="Help">${icon("circle-help")}</button><span class="avatar">DC</span></div></header>
 <main><div class="page-heading"><div class="eyebrow"><span></span> LOCK IN. LEVEL UP.</div><div class="title-row"><div><h1>Your next shot, better.</h1><p>A quiet place to build precise aim. Set up, focus, and find your rhythm.</p></div><span class="game-badge"><span class="valorant-logo">V</span> VALORANT <span class="badge-divider"></span> 1:1 SENSITIVITY</span></div></div>
 <div class="workspace-grid"><section class="range-column"><div class="panel range-panel"><div class="panel-heading"><div class="panel-title">${icon("crosshair")}Practice range <span class="pill">LIVE PREVIEW</span></div><button id="preview-fullscreen" class="icon-btn" aria-label="Expand range">${icon("expand")}</button></div><div id="range"><div class="range-top"><span class="range-location"><b></b> THE DOT WALL <small>PRECISION / FLICKING</small></span><span class="range-tag">RANGE 01</span></div><div class="hud" hidden><div>TIME<strong id="time">01:00</strong></div><div><span id="hits-label">HITS</span><strong id="hits">0</strong></div><div><span id="accuracy-label">ACCURACY</span><strong id="accuracy">—</strong></div></div><canvas id="aim-crosshair" aria-hidden="true"></canvas><div id="range-overlay"><span class="preview-chip">YOUR TRAINING GROUND</span><h2>Small targets.<br>Big improvements.</h2><p>One wall. Zero distractions. Just you and your aim.</p><button class="primary-btn" id="start">${icon("play")}Start training<span>↗</span></button><span class="start-hint">${icon("mouse")} Click to lock your mouse <span>•</span> Esc to pause</span></div><div class="range-bottom"><span>${icon("crosshair")} 103° HORIZONTAL FOV</span><span><b class="status-dot"></b><span id="input-mode">INPUT READY</span><span class="fps"><span id="fps">—</span> FPS</span></span></div><div id="session-modal" hidden></div></div><div class="range-caption"><span><b></b> DOT WALL <span class="caption-sep">/</span> Build speed without sacrificing precision.</span><span>BEGINNER → PRO</span></div></div>
@@ -104,7 +106,7 @@ scenarioCard.innerHTML = `<div class="scenario-picker"><fieldset class="scenario
   )}<option value="fix">Fix my errors · ~8 min</option></select></div><p id="routine-preview" class="field-note" role="status"></p><div class="routine-row"><label for="run-seed">Run seed</label><input id="run-seed" type="number" min="0" max="4294967295" step="1" value="${runSeed}"><button id="new-seed" class="drill-link">New seed</button></div><p class="field-note">Movement and weapon values are provisional. Recoil / spray control is planned for phase 2.</p></div>`;
 $(".hud").insertAdjacentHTML(
   "beforeend",
-  '<div id="scenario-hud"><span id="stage-label"></span><strong id="scenario-metric">—</strong><meter id="speed-bar" min="0" max="6.75" value="0" aria-label="Player speed"></meter><span id="shot-notice" role="status"></span></div>',
+  '<div id="scenario-hud"><span id="stage-label"></span><strong id="scenario-metric">—</strong><div id="speed-bar" role="meter" aria-valuemin="0" aria-valuemax="6.75" aria-valuenow="0" aria-label="Player speed"><i id="speed-fill"></i></div><span id="shot-notice" role="status"></span></div>',
 );
 createIcons({
   icons: {
@@ -215,11 +217,78 @@ let remaining = settings.duration,
   dy = 0,
   locking = false;
 let audio: AudioContext | undefined;
+const frameDebug = new FrameDebug();
+document.addEventListener("keydown", (e) => {
+  if (e.code === "F3") {
+    e.preventDefault();
+    if (!e.repeat) {
+      frameDebug.enabled = !frameDebug.enabled;
+      $("#aim-crosshair").classList.toggle("debug-visible", frameDebug.enabled);
+    }
+  }
+});
+const aimCanvas = $<HTMLCanvasElement>("#aim-crosshair");
+const crosshairBitmap = document.createElement("canvas");
+let overlayWidth = 1,
+  overlayHeight = 1,
+  overlayDpr = 1;
+const overlayContext = aimCanvas.getContext("2d")!;
 const redraw = () => {
   drawCrosshair($("#crosshair-preview"), crosshair, 2);
-  drawCrosshair($("#aim-crosshair"), crosshair, host.clientHeight / 1080);
+  overlayWidth = host.clientWidth;
+  overlayHeight = host.clientHeight;
+  overlayDpr = devicePixelRatio || 1;
+  aimCanvas.width = Math.round(overlayWidth * overlayDpr);
+  aimCanvas.height = Math.round(overlayHeight * overlayDpr);
+  drawCrosshair(crosshairBitmap, crosshair, overlayHeight / 1080);
 };
 const persist = () => saveSettings(settings);
+const feedbackPanel = document.createElement("section");
+feedbackPanel.className = "panel setting-panel";
+feedbackPanel.innerHTML = `<div class="panel-heading"><div class="panel-title">Aim feedback & performance</div><span>F3 · debug</span></div><div class="panel-body">
+${(
+  [
+    ["aimColors", "Aim feedback colors"],
+    ["leadArrow", "Lead / lag arrow"],
+    ["placementPopups", "Placement popups"],
+    ["ghostMarker", "Ghost head marker (practice only)"],
+    ["practiceMode", "Practice mode (unscored)"],
+    ["onTargetSound", "Quiet on-target hum"],
+  ] as const
+)
+  .map(
+    ([key, label]) =>
+      `<div class="toggle-row"><label for="feedback-${key}">${label}</label><input class="switch" type="checkbox" id="feedback-${key}" ${settings[key] ? "checked" : ""}></div>`,
+  )
+  .join("")}
+<label class="feedback-select">Palette <select id="feedback-palette"><option value="green-red">Green / red</option><option value="blue-orange">Blue / orange</option></select></label>
+<label class="feedback-select">Near zone <select id="feedback-nearZone"><option value="0">Off</option><option value="1.5">1.5× radius</option><option value="2">2× radius</option></select></label>
+<label class="feedback-select">Render scale <select id="feedback-renderScale"><option value="0.75">0.75</option><option value="1">1</option><option value="1.25">1.25</option></select></label></div>`;
+$(".session-panel").after(feedbackPanel);
+for (const key of [
+  "aimColors",
+  "leadArrow",
+  "placementPopups",
+  "ghostMarker",
+  "practiceMode",
+  "onTargetSound",
+] as const) {
+  $<HTMLInputElement>("#feedback-" + key).onchange = (e) => {
+    settings[key] = (e.target as HTMLInputElement).checked;
+    persist();
+  };
+}
+for (const key of ["palette", "nearZone", "renderScale"] as const) {
+  const input = $<HTMLSelectElement>("#feedback-" + key);
+  input.value = String(settings[key]);
+  input.onchange = () => {
+    if (key === "palette") settings.palette = input.value;
+    else settings[key] = Number(input.value);
+    persist();
+    if (key === "renderScale") world.resize();
+  };
+}
+
 const updateCrosshair = () => {
   settings.code = encodeCode(crosshair, settings.code);
   persist();
@@ -428,7 +497,6 @@ host.addEventListener("mousedown", (e) => {
   world.runner.held = true;
   const hit = world.shoot();
   if (hit !== null) sound(hit);
-  updateHUD();
 });
 document.addEventListener("mouseup", (e) => {
   if (e.button === 0) world.runner.held = false;
@@ -445,51 +513,73 @@ document.addEventListener("keydown", (e) => {
   world.runner.keys.add(e.code);
 });
 document.addEventListener("keyup", (e) => world.runner.keys.delete(e.code));
+function setText(selector: string, text: string) {
+  const node = $(selector);
+  if (node.textContent !== text) node.textContent = text;
+}
 function updateHUD() {
   const run = world.runner;
   shots = run.records.length;
   hits = run.hits;
   const beam = run.beam;
-  $("#stage-label").textContent =
+  setText(
+    "#stage-label",
     (playlist.length
       ? `Routine ${playlistIndex + 1}/${playlist.length} · `
       : "") +
-    (run.stage
-      ? `Rep ${Math.min(run.cycle, selected.repeat)}/${selected.repeat} · ${run.stage.type.toUpperCase()}`
-      : selected.bots.length
-        ? `Round ${Math.min(run.round, selected.rounds)}/${selected.rounds}`
-        : selected.name);
-  $("#scenario-metric").textContent = beam
-    ? `${run.trackingTime ? ((run.contactTime / run.trackingTime) * 100).toFixed(1) : "0.0"}% on target`
-    : selected.hud.speedBar
-      ? `${run.player.speed.toFixed(2)} m/s · ${run.accurate ? "ACCURATE" : "MOVING"}`
-      : `${run.kills} kills · ${run.deaths} deaths`;
-  const meter = $<HTMLMeterElement>("#speed-bar");
+      (run.stage
+        ? `Rep ${Math.min(run.cycle, selected.repeat)}/${selected.repeat} · ${run.stage.type.toUpperCase()}`
+        : selected.bots.length
+          ? `Round ${Math.min(run.round, selected.rounds)}/${selected.rounds}`
+          : selected.name),
+  );
+  setText(
+    "#scenario-metric",
+    beam
+      ? `${run.trackingTime ? ((run.contactTime / run.trackingTime) * 100).toFixed(1) : "0.0"}% on target`
+      : selected.hud.speedBar
+        ? `${run.player.speed.toFixed(2)} m/s · ${run.accurate ? "ACCURATE" : "MOVING"}`
+        : `${run.kills} kills · ${run.deaths} deaths`,
+  );
+  const meter = $("#speed-bar");
   meter.hidden = !selected.hud.speedBar;
-  meter.max = run.player.config.runSpeed;
-  meter.value = run.player.speed;
-  meter.low = run.player.accurateThreshold;
-  meter.high = run.player.accurateThreshold;
-  meter.optimum = 0;
-  $("#shot-notice").textContent = run.notice;
-  $("#time").textContent = `${Math.floor(Math.ceil(remaining) / 60)
-    .toString()
-    .padStart(
-      2,
-      "0",
-    )}:${(Math.ceil(remaining) % 60).toString().padStart(2, "0")}`;
-  $("#hits-label").textContent = beam ? "DAMAGE" : "HITS";
-  $("#accuracy-label").textContent = beam ? "ON TARGET" : "ACCURACY";
-  $("#hits").textContent = beam
-    ? Math.round(run.damage).toString()
-    : String(hits);
-  $("#accuracy").textContent = beam
-    ? run.trackingTime
-      ? Math.round((run.contactTime / run.trackingTime) * 100) + "%"
-      : "—"
-    : shots
-      ? Math.round((hits / shots) * 100) + "%"
-      : "—";
+  if (selected.hud.speedBar) {
+    const speed = run.player.speed.toFixed(2),
+      max = String(run.player.config.runSpeed);
+    if (meter.getAttribute("aria-valuenow") !== speed) {
+      meter.setAttribute("aria-valuenow", speed);
+      $("#speed-fill").style.transform =
+        `scaleX(${Math.min(1, run.player.speed / run.player.config.runSpeed)})`;
+      $("#speed-fill").style.backgroundColor = run.accurate
+        ? "#3ddc97"
+        : "#ff4655";
+    }
+    if (meter.getAttribute("aria-valuemax") !== max)
+      meter.setAttribute("aria-valuemax", max);
+  }
+  setText("#shot-notice", run.notice);
+  setText(
+    "#time",
+    `${Math.floor(Math.ceil(remaining) / 60)
+      .toString()
+      .padStart(
+        2,
+        "0",
+      )}:${(Math.ceil(remaining) % 60).toString().padStart(2, "0")}`,
+  );
+  setText("#hits-label", beam ? "DAMAGE" : "HITS");
+  setText("#accuracy-label", beam ? "ON TARGET" : "ACCURACY");
+  setText("#hits", beam ? Math.round(run.damage).toString() : String(hits));
+  setText(
+    "#accuracy",
+    beam
+      ? run.trackingTime
+        ? Math.round((run.contactTime / run.trackingTime) * 100) + "%"
+        : "—"
+      : shots
+        ? Math.round((hits / shots) * 100) + "%"
+        : "—",
+  );
 }
 function modal(ended: boolean) {
   const element = $("#session-modal");
@@ -581,6 +671,7 @@ async function start(reset = true) {
     dx = dy = 0;
     lastAimAt = performance.now();
     world.runner.release();
+    last = performance.now();
     state = "running";
     document.body.classList.add("in-session");
     $("#range-overlay").hidden = true;
@@ -646,25 +737,27 @@ function history(): Result[] {
   }
 }
 function end() {
+  updateHUD();
   world.runner.release();
   state = "ended";
   document.exitPointerLock();
   try {
-    localStorage.setItem(
-      "deadcenter.history",
-      JSON.stringify(
-        [
-          {
-            ...world.runner.summary(),
-            date: new Date().toISOString(),
-            hits,
-            shots,
-            duration: elapsed,
-          },
-          ...history(),
-        ].slice(0, 30),
-      ),
-    );
+    if (!world.runner.practice)
+      localStorage.setItem(
+        "deadcenter.history",
+        JSON.stringify(
+          [
+            {
+              ...world.runner.summary(),
+              date: new Date().toISOString(),
+              hits,
+              shots,
+              duration: elapsed,
+            },
+            ...history(),
+          ].slice(0, 30),
+        ),
+      );
   } catch {
     /* Storage optional. */
   }
@@ -673,6 +766,8 @@ function end() {
 let last = performance.now(),
   fpsTime = 0,
   frames = 0;
+let hudAt = 0;
+let humGain: GainNode | undefined;
 function frame(now: number) {
   const dt = (now - last) / 1000;
   last = now;
@@ -682,10 +777,63 @@ function frame(now: number) {
     remaining -= used;
     elapsed += used;
     world.runner.update(used);
-    updateHUD();
+    if (now >= hudAt) {
+      updateHUD();
+      hudAt = now + 50;
+    }
     if (remaining <= 0 || world.runner.done) end();
   }
+  const renderAt = performance.now();
   world.render(Math.min(dt, 0.1), state !== "idle");
+  const renderMs = performance.now() - renderAt;
+  frameDebug.record(
+    now,
+    dt * 1000,
+    world.runner.simMs,
+    world.runner.visMs,
+    renderMs,
+    world.renderer.info.render.calls,
+    world.renderer.info.programs?.length || 0,
+    world.runner.bots.length,
+  );
+  overlayContext.setTransform(overlayDpr, 0, 0, overlayDpr, 0, 0);
+  overlayContext.clearRect(0, 0, overlayWidth, overlayHeight);
+  overlayContext.drawImage(
+    crosshairBitmap,
+    overlayWidth / 2 - 80,
+    overlayHeight / 2 - 80,
+    160,
+    160,
+  );
+  if (state === "running")
+    drawFeedback(
+      overlayContext,
+      overlayWidth,
+      overlayHeight,
+      world.runner,
+      settings,
+    );
+  frameDebug.draw(overlayContext);
+  if (audio && settings.onTargetSound && !humGain) {
+    const oscillator = audio.createOscillator();
+    humGain = audio.createGain();
+    humGain.gain.value = 0;
+    oscillator.frequency.value = 220;
+    oscillator.connect(humGain);
+    humGain.connect(audio.destination);
+    oscillator.start();
+  }
+  if (humGain && audio)
+    humGain.gain.setTargetAtTime(
+      state === "running" &&
+        settings.onTargetSound &&
+        world.runner.beam &&
+        world.runner.aimOn
+        ? 0.012
+        : 0,
+      audio.currentTime,
+      0.01,
+    );
   frames++;
   fpsTime += dt;
   if (fpsTime > 0.5) {

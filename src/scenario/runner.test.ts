@@ -129,18 +129,18 @@ test("head/body/legs hitboxes resolve separately and cover blocks damage", () =>
   assert.equal(r.damage, 0);
   r.dispose();
 });
-test("tracking scores zero without held input; deals continuous damage with contact", () => {
+test("tracking measures aim without held input; damage still requires held contact", () => {
   const r = run("strafe-track");
   r.targets[0].config.movement.type = "static";
   r.targets[0].place(new THREE.Vector3(0, 1.6, -10));
   aim(r);
   r.update(0.2);
-  assert.equal(r.contactTime, 0);
+  assert.equal(r.contactTime, 0.2);
   assert.equal(r.damage, 0);
   r.held = true;
   r.update(0.2);
   assert.ok(Math.abs(r.damage - 20) < 0.01);
-  assert.ok(Math.abs(r.summary().onTargetPercent! - 50) < 0.01);
+  assert.ok(Math.abs(r.summary().onTargetPercent! - 100) < 0.01);
   r.release();
   assert.equal(r.held, false);
   r.dispose();
@@ -323,4 +323,178 @@ test("combo timeout records failure; completed final round ends the run", () => 
   assert.equal(r.done, true);
   assert.equal(r.roundsCleared, 1);
   r.dispose();
+});
+
+test("fixed simulation produces the same seeded jiggle motion at 60, 144 and 240 Hz", () => {
+  const runs = [60, 144, 240].map((hz) => {
+    const r = run("jiggle-track");
+    for (let i = 0; i < hz * 5; i++) r.update(1 / hz);
+    return r;
+  });
+  for (const r of runs.slice(1)) {
+    assert.ok(r.targets[0].pos.distanceTo(runs[0].targets[0].pos) < 1e-9);
+    assert.ok(
+      r.targets[0].velocity.distanceTo(runs[0].targets[0].velocity) < 1e-9,
+    );
+  }
+  runs.forEach((r) => r.dispose());
+});
+test("aim colors switch immediately, respect occlusion and use separate shared head/body materials", () => {
+  const r = run("head-level-track"),
+    t = r.targets[0];
+  t.config.movement.type = "static";
+  t.place(new THREE.Vector3(0, 0, -10));
+  aim(r);
+  r.update(1 / 240);
+  assert.equal(t.aimState, "head");
+  const headMaterial = (t.group.children[0] as THREE.Mesh).material;
+  assert.notEqual(headMaterial, (t.group.children[1] as THREE.Mesh).material);
+  r.camera.lookAt(new THREE.Vector3(0, 1, -10));
+  r.update(1 / 240);
+  assert.equal(t.aimState, "on");
+  assert.notEqual((t.group.children[0] as THREE.Mesh).material, headMaterial);
+  r.cover.push(
+    new THREE.Box3(new THREE.Vector3(-1, 0, -5), new THREE.Vector3(1, 3, -4)),
+  );
+  r.update(1 / 240);
+  assert.equal(t.aimState, "off");
+  assert.equal(r.aimOn, false);
+  r.dispose();
+});
+test("tiny target edge uses the same analytic hit for color and damage; near zone and palette work", () => {
+  const r = run("strafe-track"),
+    t = r.targets[0];
+  t.config.movement.type = "static";
+  t.config.size = 0.1;
+  t.place(new THREE.Vector3(0, 1.6, -10));
+  r.held = true;
+  r.camera.lookAt(new THREE.Vector3(0.099, 1.6, -10));
+  r.update(1 / 240);
+  assert.equal(t.aimState, "on");
+  assert.ok(r.damage > 0);
+  const damage = r.damage;
+  r.camera.lookAt(new THREE.Vector3(0.12, 1.6, -10));
+  r.update(1 / 240);
+  assert.equal(t.aimState, "near");
+  assert.equal(r.damage, damage);
+  r.settings.nearZone = 0;
+  r.update(1 / 240);
+  assert.equal(t.aimState, "off");
+  r.settings.palette = "blue-orange";
+  aim(r);
+  r.update(1 / 240);
+  assert.equal(
+    (
+      (t.group.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial
+    ).color.getHexString(),
+    "4aa8ff",
+  );
+  r.dispose();
+});
+test("direction reversal reacquires without firing and lead/lag follows screen movement", () => {
+  const r = run("strafe-track"),
+    t = r.targets[0];
+  t.config.movement.type = "static";
+  t.place(new THREE.Vector3(0, 1.6, -10));
+  t.velocity.set(2, 0, 0);
+  r.camera.lookAt(new THREE.Vector3(-1, 1.6, -10));
+  r.update(1 / 240);
+  assert.equal(r.lagging, true);
+  assert.ok(r.leadX > 0);
+  t.velocity.x = -2;
+  r.update(1 / 240);
+  assert.equal(r.lagging, false);
+  r.camera.lookAt(new THREE.Vector3(1, 1.6, -10));
+  r.update(1 / 240);
+  assert.equal(r.lagging, true);
+  assert.ok(r.leadX < 0);
+  t.changedAt = t.age;
+  t.lagRecorded = false;
+  aim(r);
+  r.update(0.05);
+  assert.ok(Math.abs(r.summary().reactionLagMs! - 50) < 0.001);
+  assert.equal(r.damage, 0);
+  r.dispose();
+});
+test("angle reveal records near-zero placement at head aim and flashes for only 150 ms", () => {
+  const r = run("pre-aim-corner");
+  r.bots.forEach((b) => (b.config.shootsBack = false));
+  r.player.position.x = 2;
+  r.player.prev.copy(r.player.position);
+  r.camera.position.set(2, 1.6, 0);
+  aim(r);
+  r.update(1 / 240);
+  assert.ok(r.placement.error < 1);
+  assert.equal(r.placement.label, "PERFECT");
+  assert.equal(r.placements.length, 1);
+  assert.ok(r.targets[0].flashUntil > r.time);
+  r.update(0.16);
+  assert.ok(r.targets[0].flashUntil < r.time);
+  r.dispose();
+});
+test("bot rounds reuse preallocated meshes and geometries", () => {
+  const r = run("pre-aim-corner");
+  const meshes = r.warmTargets().flatMap((t) => t.group.children);
+  for (let i = 0; i < 5; i++) {
+    r.player.position.x = 2;
+    r.update(0.8);
+    r.update(0.8);
+  }
+  assert.deepEqual(
+    r.warmTargets().flatMap((t) => t.group.children),
+    meshes,
+  );
+  r.dispose();
+});
+
+test("Jiggle Track respawn starts a cosmetic pulse without changing target size or hitbox", () => {
+  const r = run("jiggle-track"),
+    t = r.targets[0];
+  assert.equal(t.respawnAt, -Infinity);
+  t.config.movement.type = "static";
+  t.place(new THREE.Vector3(0, 1.6, -10));
+  const radius = t.config.size,
+    geometry = (t.group.children[0] as THREE.Mesh).geometry;
+  t.hp = 1;
+  r.held = true;
+  aim(r);
+  r.update(0.02);
+  assert.equal(r.kills, 1);
+  r.held = false;
+  r.update(0.02);
+  const respawned = r.targets[0];
+  assert.ok(Number.isFinite(respawned.respawnAt));
+  assert.ok(r.time - respawned.respawnAt < 0.35);
+  assert.equal(respawned.config.size, radius);
+  assert.equal(respawned.scale, 1);
+  assert.equal((respawned.group.children[0] as THREE.Mesh).geometry, geometry);
+  r.update(0.36);
+  assert.ok(r.time - respawned.respawnAt >= 0.35);
+  r.dispose();
+});
+
+test("Slice the Pie pulses only when the next round resets, including behind cover", () => {
+  const r = run("slice-the-pie");
+  assert.equal(r.roundResetAt, -Infinity);
+  r.bots.forEach((bot) => {
+    bot.config.shootsBack = true;
+    bot.reaction = 0.01;
+  });
+  r.player.position.x = 3;
+  r.update(0.02);
+  assert.equal(r.deaths, 1);
+  assert.equal(r.roundResetAt, -Infinity);
+  while (r.round === 1 && r.time < 2) r.update(1 / 240);
+  assert.equal(r.round, 2);
+  assert.ok(Math.abs(r.roundResetAt - r.time) < 1e-8);
+  assert.ok(r.targets.every((t) => !t.visibleNow));
+  r.update(0.36);
+  assert.ok(r.time - r.roundResetAt > 0.35);
+  r.dispose();
+  const other = run("pre-aim-corner");
+  other.player.position.x = 3;
+  other.update(0.8);
+  other.update(0.8);
+  assert.equal(other.roundResetAt, -Infinity);
+  other.dispose();
 });

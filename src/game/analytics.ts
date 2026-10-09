@@ -72,34 +72,90 @@ export function topErrors(counts: Partial<Record<ErrorKind, number>>) {
 }
 /** Retain signed error samples for one target; classification needs a trajectory, not a single miss. */
 export class AimHistory {
-  samples: { t: number; yaw: number; pitch: number; speed: number }[] = [];
+  private data = new Float64Array(1024 * 4);
+  private start = 0;
+  private count = 0;
+  reset() {
+    this.start = this.count = 0;
+  }
+  get firstPitch() {
+    return this.count ? this.data[this.start * 4 + 2] : undefined;
+  }
   add(t: number, error: { yaw: number; pitch: number }, speed: number) {
-    this.samples.push({ t, ...error, speed });
-    this.samples = this.samples.filter((s) => t - s.t < 0.8);
+    while (this.count && t - this.data[this.start * 4] >= 0.8) {
+      this.start = (this.start + 1) % 1024;
+      this.count--;
+    }
+    if (this.count === 1024) {
+      this.start = (this.start + 1) % 1024;
+      this.count--;
+    }
+    const i = ((this.start + this.count++) % 1024) * 4;
+    this.data[i] = t;
+    this.data[i + 1] = error.yaw;
+    this.data[i + 2] = error.pitch;
+    this.data[i + 3] = speed;
   }
   correction(): "over" | "under" | undefined {
-    const s = this.samples;
-    if (s.length < 5) return;
-    const axis = Math.abs(s[0].yaw) > Math.abs(s[0].pitch) ? "yaw" : "pitch";
-    if (Math.abs(s[0][axis]) < 1) return;
-    if (
-      s.some(
-        (p, i) => i > 0 && p[axis] * s[0][axis] < 0 && Math.abs(p[axis]) > 0.3,
-      ) &&
-      Math.abs(s.at(-1)![axis]) < 0.5
-    )
-      return "over";
-    if (
-      s.some(
-        (p, i) =>
-          i > 0 &&
-          i < s.length - 2 &&
-          p.speed < 8 &&
-          Math.abs(p[axis]) > 0.6 &&
-          s.slice(i + 1).some((q) => q.speed > 25),
-      ) &&
-      Math.abs(s.at(-1)![axis]) < 0.5
-    )
-      return "under";
+    if (this.count < 5) return;
+    const first = this.start * 4;
+    const axis =
+      Math.abs(this.data[first + 1]) > Math.abs(this.data[first + 2]) ? 1 : 2;
+    const initial = this.data[first + axis];
+    const last = ((this.start + this.count - 1) % 1024) * 4;
+    if (Math.abs(initial) < 1 || Math.abs(this.data[last + axis]) >= 0.5)
+      return;
+    let paused = false,
+      under = false;
+    for (let n = 1; n < this.count; n++) {
+      const i = ((this.start + n) % 1024) * 4;
+      if (
+        this.data[i + axis] * initial < 0 &&
+        Math.abs(this.data[i + axis]) > 0.3
+      )
+        return "over";
+      if (paused && this.data[i + 3] > 25) under = true;
+      if (
+        n < this.count - 2 &&
+        this.data[i + 3] < 8 &&
+        Math.abs(this.data[i + axis]) > 0.6
+      )
+        paused = true;
+    }
+    if (under) return "under";
+  }
+}
+
+/** Time-weighted 100 ms buckets; bounded storage supports sessions up to two hours. */
+export class TrackingSamples {
+  readonly states = new Uint8Array(120 * 1000);
+  readonly durations = new Float32Array(120 * 1000);
+  count = 0;
+  private elapsed = 0;
+  private bins = new Float32Array(72000 * 4);
+  add(dt: number, state: number) {
+    if (this.count < this.states.length) {
+      this.states[this.count] = state;
+      this.durations[this.count++] = dt;
+    }
+    let left = dt;
+    while (left > 1e-9) {
+      const bin = Math.floor((this.elapsed + 1e-9) * 10);
+      if (bin >= 72000) break;
+      const used = Math.min(left, (bin + 1) / 10 - this.elapsed);
+      this.bins[bin * 4 + state] += used;
+      this.elapsed += used;
+      left -= used;
+    }
+  }
+  timeline() {
+    const result: number[] = [];
+    for (let i = 0; i < Math.ceil(this.elapsed * 10 - 1e-8); i++) {
+      let state = 0;
+      for (let j = 1; j < 4; j++)
+        if (this.bins[i * 4 + j] > this.bins[i * 4 + state]) state = j;
+      result.push(state);
+    }
+    return result;
   }
 }

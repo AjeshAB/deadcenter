@@ -2,6 +2,10 @@ import { Vector3 } from "three";
 import type { Box, Scenario } from "../scenario/schema";
 export class Player {
   position = new Vector3();
+  prev = new Vector3();
+  private desired = new Vector3();
+  private delta = new Vector3();
+  private up = new Vector3(0, 1, 0);
   velocity = new Vector3();
   stoppedAt = 0;
   wasMoving = false;
@@ -10,6 +14,7 @@ export class Player {
     public movement: Scenario["movement"],
   ) {
     this.position.fromArray(config.spawn);
+    this.prev.copy(this.position);
   }
   get speed() {
     return this.velocity.length();
@@ -29,11 +34,11 @@ export class Player {
       this.movement === "free"
         ? Number(keys.has("KeyW")) - Number(keys.has("KeyS"))
         : 0;
-    const desired = new Vector3(right, 0, -forward);
+    const desired = this.desired.set(right, 0, -forward);
     if (this.movement === "locked") desired.set(0, 0, 0);
     desired
       .normalize()
-      .applyAxisAngle(new Vector3(0, 1, 0), yaw)
+      .applyAxisAngle(this.up, yaw)
       .multiplyScalar(
         keys.has("ShiftLeft") || keys.has("ShiftRight")
           ? this.config.walkSpeed
@@ -43,14 +48,14 @@ export class Player {
     for (let left = dt; left > 1e-8;) {
       const step = Math.min(left, 1 / 120);
       left -= step;
-      const delta = desired.clone().sub(this.velocity);
+      const delta = this.delta.copy(desired).sub(this.velocity);
       this.velocity.add(
         delta.clampLength(
           0,
           (desired.lengthSq() ? this.config.accel : this.config.decel) * step,
         ),
       );
-      for (const axis of ["x", "z"] as const) {
+      for (const axis of AXES) {
         const other = axis === "x" ? "z" : "x";
         const i = axis === "x" ? 0 : 2,
           j = i === 0 ? 2 : 0;
@@ -79,3 +84,5 @@ export class Player {
     this.wasMoving = moving;
   }
 }
+
+const AXES = ["x", "z"] as const;

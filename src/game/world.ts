@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { MATERIALS, ACCESSIBLE } from "./targets";
 import { VERTICAL_FOV } from "../input/sens";
 import type { Settings } from "../settings/store";
 import type { Scenario } from "../scenario/schema";
@@ -6,7 +7,9 @@ import { ScenarioRunner } from "../scenario/runner";
 import { findScenario } from "../scenario/catalog";
 export function createWorld(host: HTMLElement, settings: Settings) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * settings.renderScale);
+  renderer.shadowMap.enabled = false;
+  renderer.info.autoReset = false;
   renderer.setClearColor("#171c1b");
   host.prepend(renderer.domElement);
   const scene = new THREE.Scene();
@@ -78,6 +81,9 @@ export function createWorld(host: HTMLElement, settings: Settings) {
     seed = nextSeed;
     wall.visible = lines.visible = scenario.category === "wall";
     runner = new ScenarioRunner(scenario, scene, camera, settings, seed);
+    runner.practice = settings.practiceMode;
+    resize();
+    warmUp();
   }
   function update() {
     configure(scenario);
@@ -122,6 +128,9 @@ export function createWorld(host: HTMLElement, settings: Settings) {
   }
   const resize = () => {
     const { width, height } = host.getBoundingClientRect();
+    renderer.setPixelRatio(
+      Math.min(devicePixelRatio, 2) * settings.renderScale,
+    );
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -130,8 +139,39 @@ export function createWorld(host: HTMLElement, settings: Settings) {
   };
   new ResizeObserver(resize).observe(host);
   resize();
+  let programs = 0;
+  function warmUp() {
+    const targets = runner.warmTargets();
+    const visibility = targets.map((t) => t.group.visible);
+    for (const t of targets) t.group.visible = true;
+    const warmMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 8, 6),
+      MATERIALS.off,
+    );
+    scene.add(warmMesh);
+    for (const material of [
+      ...Object.values(MATERIALS),
+      ...Object.values(ACCESSIBLE),
+    ]) {
+      warmMesh.material = material;
+      renderer.compile(scene, camera);
+    }
+    flash.visible = true;
+    renderer.compile(gunScene, gunCamera);
+    renderer.render(scene, camera);
+    renderer.render(gunScene, gunCamera);
+    flash.visible = false;
+    warmMesh.removeFromParent();
+    warmMesh.geometry.dispose();
+    targets.forEach((t, i) => (t.group.visible = visibility[i]));
+    programs = renderer.info.programs?.length || 0;
+  }
+  warmUp();
   return {
     camera,
+    renderer,
+    resize,
+    warmUp,
     get runner() {
       return runner;
     },
@@ -146,6 +186,7 @@ export function createWorld(host: HTMLElement, settings: Settings) {
       gun.position.z = -0.65 + kick * 0.08;
       gun.rotation.x = kick * 0.14;
       flash.visible = kick > 0.7;
+      renderer.info.reset();
       renderer.autoClear = true;
       renderer.render(scene, camera);
       if (playing && settings.gun) {
@@ -153,6 +194,14 @@ export function createWorld(host: HTMLElement, settings: Settings) {
         renderer.clearDepth();
         renderer.render(gunScene, gunCamera);
       }
+      const count = renderer.info.programs?.length || 0;
+      if (playing && count !== programs)
+        console.warn(
+          "Shader program count changed during play",
+          programs,
+          count,
+        );
+      programs = count;
     },
   };
 }

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Deadcenter performance verification</title>
+  <style>
+    body {
+      background: #111b16;
+      color: #e6eee7;
+      font: 14px monospace;
+      margin: 20px;
+    }
+    #range {
+      width: 960px;
+      height: 540px;
+      position: relative;
+    }
+    canvas {
+      display: block;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <h1>Repeatable rendering smoke test</h1>
+  <p>
+    30 seconds each: Jiggle Track, Jiggle Info, Slice the Pie. Scripted input;
+    this does not replace manual mouse/monitor testing.
+  </p>
+  <label
+    >Scenario
+    <select id="scenario">
+      <option value="all">All three</option>
+      <option value="jiggle-track">Jiggle Track</option>
+      <option value="jiggle-info">Jiggle Info</option>
+      <option value="slice-the-pie">Slice the Pie</option>
+    </select></label
+  >
+  <button id="start">Run check (30 seconds per scenario)</button>
+  <button id="respawn">Preview Jiggle Track respawn</button>
+  <button id="slice-reset">Preview Slice the Pie reset</button>
+  <div id="range"><canvas id="overlay" width="960" height="540"></canvas></div>
+  <pre id="status">Ready</pre>
+  <script type="module">
+    import { createWorld } from "/src/game/world.ts";
+    import { defaults } from "/src/settings/store.ts";
+    import { findScenario } from "/src/scenario/catalog.ts";
+    import { drawFeedback } from "/src/game/feedback.ts";
+    import { FrameDebug } from "/src/game/debug.ts";
+    const host = document.querySelector("#range"),
+      status = document.querySelector("#status");
+    const settings = { ...defaults };
+    const world = createWorld(host, settings),
+      debug = new FrameDebug();
+    debug.enabled = true;
+    const context = document.querySelector("#overlay").getContext("2d");
+    let ids = ["jiggle-track", "jiggle-info", "slice-the-pie"];
+    const results = [];
+    let previousFrame = 0;
+    let index = 0,
+      running = false,
+      started = 0,
+      last = 0,
+      nextStatus = 0,
+      n = 0,
+      initialPrograms = 0,
+      changes = 0;
+    const frameTimes = new Float64Array(30000),
+      simTimes = new Float64Array(30000),
+      renderTimes = new Float64Array(30000);
+    function begin(now) {
+      const scenario = structuredClone(findScenario("builtin/" + ids[index]));
+      scenario.rounds = 1000;
+      world.configure(scenario, 42);
+      initialPrograms = world.renderer.info.programs.length;
+      started = last = performance.now();
+      n = changes = 0;
+    }
+    function stats(values) {
+      const sorted = Array.from(values.subarray(0, n)).sort((a, b) => a - b);
+      return {
+        mean: sorted.reduce((a, b) => a + b, 0) / n,
+        p99: sorted[Math.floor(n * 0.99)],
+        max: sorted.at(-1),
+      };
+    }
+    document.querySelector("#start").onclick = () => {
+      if (running) return;
+      index = 0;
+      const choice = document.querySelector("#scenario").value;
+      ids =
+        choice === "all"
+          ? ["jiggle-track", "jiggle-info", "slice-the-pie"]
+          : [choice];
+      results.length = 0;
+      running = true;
+      begin(performance.now());
+      requestAnimationFrame(frame);
+    };
+    function frame(now) {
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      const run = world.runner,
+        t = (now - started) / 1000;
+      run.keys.clear();
+      if (ids[index] !== "jiggle-track")
+        run.keys.add(Math.floor(t / 1.5) % 2 ? "KeyA" : "KeyD");
+      if (run.targets[0]) {
+        world.camera.lookAt(run.targets[0].head);
+        world.camera.rotation.y += Math.sin(t * 3) * 0.03;
+      }
+      run.held = true;
+      run.update(dt);
+      const renderAt = performance.now();
+      world.render(dt, true);
+      const renderMs = performance.now() - renderAt;
+      if (n < frameTimes.length) {
+        frameTimes[n] = now - (n ? previousFrame : started);
+        simTimes[n] = run.simMs + run.visMs;
+        renderTimes[n] = renderMs;
+        n++;
+      }
+      previousFrame = now;
+      if (world.renderer.info.programs.length !== initialPrograms) changes++;
+      context.clearRect(0, 0, 960, 540);
+      drawFeedback(context, 960, 540, run, settings);
+      debug.record(
+        now,
+        dt * 1000,
+        run.simMs,
+        run.visMs,
+        renderMs,
+        world.renderer.info.render.calls,
+        world.renderer.info.programs.length,
+        run.bots.length,
+      );
+      debug.draw(context);
+      context.fillStyle = "#fff";
+      context.fillRect(478, 269, 4, 2);
+      context.fillRect(479, 268, 2, 4);
+      if (now >= nextStatus) {
+        status.textContent =
+          JSON.stringify(results, null, 2) +
+          "\nRunning " +
+          ids[index] +
+          " " +
+          t.toFixed(1) +
+          "s";
+        nextStatus = now + 250;
+      }
+      if (t >= 30) {
+        results.push({
+          scenario: ids[index],
+          frames: n,
+          frameMs: stats(frameTimes),
+          simMs: stats(simTimes),
+          renderSubmissionMs: stats(renderTimes),
+          programs: initialPrograms,
+          framesWithProgramChange: changes,
+          drawCalls: world.renderer.info.render.calls,
+          geometries: world.renderer.info.memory.geometries,
+        });
+        index++;
+        if (index === ids.length) {
+          running = false;
+          status.textContent = "COMPLETE\n" + JSON.stringify(results, null, 2);
+          return;
+        }
+        begin(now);
+      }
+      requestAnimationFrame(frame);
+    }
+    document.querySelector("#respawn").onclick = () => {
+      if (running) return;
+      const scenario = structuredClone(findScenario("builtin/jiggle-track"));
+      scenario.targets.movement.type = "static";
+      world.configure(scenario, 42);
+      const run = world.runner;
+      world.camera.lookAt(run.targets[0].head);
+      run.targets[0].hp = 1;
+      run.held = true;
+      run.update(0.02);
+      run.held = false;
+      run.update(0.06);
+      world.camera.lookAt(run.targets[0].head);
+      run.update(0);
+      world.render(0, true);
+      context.clearRect(0, 0, 960, 540);
+      drawFeedback(context, 960, 540, run, settings);
+      status.textContent =
+        "Respawn effect preview, frozen at 58 ms: expanding ring and four sparks. Live effect lasts 350 ms; hitbox and aim color are unchanged.";
+    };
+    document.querySelector("#slice-reset").onclick = () => {
+      if (running) return;
+      world.configure(
+        structuredClone(findScenario("builtin/slice-the-pie")),
+        42,
+      );
+      const run = world.runner;
+      run.bots.forEach((bot) => {
+        bot.config.shootsBack = true;
+        bot.reaction = 0.01;
+      });
+      run.player.position.x = 3;
+      run.update(0.02);
+      while (run.round === 1 && run.time < 2) run.update(1 / 240);
+      run.update(0.06);
+      world.render(0, true);
+      context.clearRect(0, 0, 960, 540);
+      drawFeedback(context, 960, 540, run, settings);
+      status.textContent =
+        "Slice the Pie round " +
+        run.round +
+        " reset: 350 ms ring and sparks, visible even while bots are behind cover. Preview frozen at 60 ms.";
+    };
+    world.render(0, false);
+  </script>
+</html>
